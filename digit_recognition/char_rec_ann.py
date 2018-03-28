@@ -73,12 +73,12 @@ class NeuralNet(object):
 def plot_characters():
     X, Y, _, _ = getdata()
     while True:
-        f, axarr = plt.subplots(1, 7)
-        for i in range(7):
+        f, axarr = plt.subplots(3, 4)
+        for i in range(10):
             x_select, y_select = X[Y==i], Y[Y==i]
             N_select = len(y_select)
             j = np.random.choice(N_select)
-            axarr[i].imshow(np.reshape(x_select[j], (48,48)), cmap='gray')
+            axarr[i].imshow(np.reshape(x_select[j], (28,28)), cmap='gray')
             axarr[i].set_title(label_map[y_select[j]])
         plt.show()
         prompt = input('Quit? Enter Y:\n')
@@ -87,11 +87,9 @@ def plot_characters():
 
 
 def main():
-    X_train, Y_train, X_test, Y_test = get_data()
-    #for i in range(7):
-    #    print(np.sum(Y_train==i))
-    nn_classify = NeuralNet(300)
-    nn_classify.fit(X_train, Y_train, epochs=10000, learning_rate=1e-6, reg=1e-8, show_fig=True)
+    X_train, Y_train = get_data()
+    nn_classify = NeuralNet(400)
+    nn_classify.fit(X_train, Y_train, epochs=1000, learning_rate=1e-8, reg=1e-8, show_fig=True)
 
 if __name__ == '__main__':
     main()

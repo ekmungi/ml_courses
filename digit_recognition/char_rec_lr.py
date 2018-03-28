@@ -1,6 +1,7 @@
 import numpy as np 
 import matplotlib.pyplot as plt
 from sklearn.utils import shuffle
+from sklearn.decomposition import PCA
 from utils import cross_entropy, one_hot_encoder, softmax, get_data, error_rate
 
 class LogisticRegression(object):
@@ -83,8 +84,13 @@ def main():
 if __name__ == '__main__':
     #main()
     X_train, Y_train = get_data()
+    
+    pca = PCA(n_components=100)
+    pca.fit(X_train)
+    X_train_compressed = pca.transform(X_train)
+
     lr_classify = LogisticRegression()
-    lr_classify.fit(X_train, Y_train, learning_rate=1e-8, reg=1e-6, show_fig=True)
+    lr_classify.fit(X_train_compressed, Y_train, learning_rate=1e-8, reg=1e-6, show_fig=True)
     #X_test, Y_test = get_data('/media/avemuri/DEV/Data/deeplearning/mnist/test.csv')
     #print("Final test classification_rate:", lr_classify.score(X_test, Y_test))
 
