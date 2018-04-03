@@ -66,15 +66,16 @@ class LogisticRegression(object):
 
 
 def main():
-    X, Y = getdata()
+    #file_loc = '/media/avemuri/DEV/Data/deeplearning/mnist/train.csv'
+    file_loc = 'D:/dev/data/mnist/train.csv'
+    X, Y = get_data(file_name=file_loc)
     while True:
         f, axarr = plt.subplots(1, 7)
         for i in range(7):
             x_select, y_select = X[Y==i], Y[Y==i]
             N_select = len(y_select)
             j = np.random.choice(N_select)
-            axarr[i].imshow(np.reshape(x_select[j], (48,48)), cmap='gray')
-            axarr[i].set_title(label_map[y_select[j]])
+            axarr[i].imshow(np.reshape(x_select[j], (28,28)), cmap='gray')
         plt.show()
         prompt = input('Quit? Enter Y:\n')
         if (prompt == 'Y') | (prompt == 'y'):
@@ -83,16 +84,17 @@ def main():
 
 if __name__ == '__main__':
     #main()
-    X_train, Y_train = get_data()
+    X_train, Y_train, X_test, Y_test = get_data(split_train_test=True)
     
     pca = PCA(n_components=100)
     pca.fit(X_train)
     X_train_compressed = pca.transform(X_train)
 
     lr_classify = LogisticRegression()
-    lr_classify.fit(X_train_compressed, Y_train, learning_rate=1e-8, reg=1e-6, show_fig=True)
-    #X_test, Y_test = get_data('/media/avemuri/DEV/Data/deeplearning/mnist/test.csv')
-    #print("Final test classification_rate:", lr_classify.score(X_test, Y_test))
+    lr_classify.fit(X_train_compressed, Y_train, epochs=1000, learning_rate=0.00004, reg=0.01, show_fig=True)
+
+    X_test_compressed = pca.transform(X_test)
+    print("Test classification_rate:", lr_classify.score(X_test_compressed, Y_test))
 
     
 

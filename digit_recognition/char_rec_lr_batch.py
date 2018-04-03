@@ -1,13 +1,11 @@
-import numpy as np
+import numpy as np 
 import matplotlib.pyplot as plt
 from sklearn.utils import shuffle
 from sklearn.decomposition import PCA
-from utils import cross_entropy, one_hot_encoder, softmax, get_data, error_rate, sigmoid
+from utils import cross_entropy, one_hot_encoder, softmax, get_data, error_rate
 
-
-class NeuralNet(object):
-    def __init__(self, M):
-        self.M = M # number of hidden layer units
+class LogisticRegression(object):
+    def __init__(self):
         pass
 
     def fit(self, X, Y, learning_rate=1e-8, reg=1e-12, epochs=10000, show_fig=False):
@@ -22,28 +20,19 @@ class NeuralNet(object):
 
         T = one_hot_encoder(Y)
 
-        self.W1 = np.random.randn(D, self.M) / np.sqrt(D)
-        self.b1 = np.zeros(self.M)
-        self.W2 = np.random.randn(self.M, K) / np.sqrt(self.M)
-        self.b2 = np.zeros(K)
+        self.W = np.random.randn(D, K) / np.sqrt(D)
+        self.b = np.zeros(K)
 
         costs = []
         best_validation_error = 1
         for epoch in range(epochs):
-            Y_hat, Z = self.forward(X)
+            Y_hat = self.forward(X)
 
-            # Weight updates ----------------------
-            Y_hat_T = Y_hat-T
-            self.W2 -= learning_rate * (Z.T.dot(Y_hat_T) + reg*self.W2)
-            self.b2 -= learning_rate * (Y_hat_T.sum() + reg*self.b2)
-
-            val = Y_hat_T.dot(self.W2.T) * (1-Z*Z) #tanh
-            self.W1 -= learning_rate * (X.T.dot(val) + reg*self.W1)
-            self.b1 -= learning_rate * (val.sum() + reg*self.b1)
-            # -------------------------------------
+            self.W -= learning_rate * (self.dJ_dw(T, Y_hat, X) + reg*self.W)
+            self.b -= learning_rate * (self.dJ_db(T, Y_hat) + reg*self.b)
             
-            if epoch % 10 == 0:
-                Y_hat_valid, _ = self.forward(X_valid)
+            if epoch % 100 == 0:
+                Y_hat_valid = self.forward(X_valid)
                 c = cross_entropy(T_valid, Y_hat_valid)
                 costs.append(c)
                 e = error_rate(Y_valid, np.argmax(Y_hat_valid, axis=1))
@@ -55,7 +44,7 @@ class NeuralNet(object):
         if show_fig:
             plt.plot(costs)
             plt.title('Validation cost')
-
+            plt.show()
         print("Final train classification_rate:", self.score(X, Y))
 
     def predict(self, X):
@@ -67,19 +56,24 @@ class NeuralNet(object):
         return np.round(1 - error_rate(Y, prediction), 4)
 
     def forward(self, X):
-        Z = np.tanh(X.dot(self.W1) + self.b1)
-        Y_hat = softmax(Z.dot(self.W2) + self.b2)
-        return Y_hat, Z        
+        return softmax(X.dot(self.W) + self.b)
 
-def plot_characters():
-    X, Y, _, _ = getdata()
+    def dJ_dw(self, Y, Y_hat, X):
+        return X.T.dot(Y_hat-Y)
+
+    def dJ_db(self, Y, Y_hat):
+        return (Y_hat-Y).sum(axis=0)
+
+
+def main():
+    X, Y = getdata()
     while True:
-        f, axarr = plt.subplots(3, 4)
-        for i in range(10):
+        f, axarr = plt.subplots(1, 7)
+        for i in range(7):
             x_select, y_select = X[Y==i], Y[Y==i]
             N_select = len(y_select)
             j = np.random.choice(N_select)
-            axarr[i].imshow(np.reshape(x_select[j], (28,28)), cmap='gray')
+            axarr[i].imshow(np.reshape(x_select[j], (48,48)), cmap='gray')
             axarr[i].set_title(label_map[y_select[j]])
         plt.show()
         prompt = input('Quit? Enter Y:\n')
@@ -87,24 +81,20 @@ def plot_characters():
             break
 
 
-def main():
-    #file_loc = '/media/avemuri/DEV/Data/deeplearning/mnist/train.csv'
-    file_loc = 'D:/dev/data/mnist/train.csv'
-    X_train, Y_train, X_test, Y_test = get_data(file_name=file_loc, split_train_test=True)
-
-    nn_classify = NeuralNet(200)
+if __name__ == '__main__':
+    #main()
+    X_train, Y_train, X_test, Y_test = get_data(split_train_test=True)
     
-    pca = PCA(n_components=400)
+    pca = PCA(n_components=100)
     pca.fit(X_train)
     X_train_compressed = pca.transform(X_train)
 
-    nn_classify.fit(X_train_compressed, Y_train, epochs=100, learning_rate=1e-8, reg=1e-8, show_fig=True)
+    lr_classify = LogisticRegression()
+    lr_classify.fit(X_train_compressed, Y_train, epochs=1000, learning_rate=0.00004, reg=0.01, show_fig=True)
 
     X_test_compressed = pca.transform(X_test)
     print("Test classification_rate:", lr_classify.score(X_test_compressed, Y_test))
 
-if __name__ == '__main__':
-    main()
     
 
 
