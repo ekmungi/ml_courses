@@ -48,6 +48,10 @@ def error_rate(targets, predictions):
     return np.mean(targets != predictions)
 
 
+def relu(a):
+    return a * (a > 0)
+
+
 def main():
     get_data()
 

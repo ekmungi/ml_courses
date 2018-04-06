@@ -2,10 +2,14 @@ import numpy as np
 import matplotlib.pyplot as plt
 from sklearn.utils import shuffle
 from sklearn.decomposition import PCA
-from utils import cross_entropy, one_hot_encoder, softmax, get_data, error_rate, relu
+from utils import cross_entropy, one_hot_encoder, softmax, get_data, error_rate
 
 import theano.tensor as Th
 import theano
+
+
+def relu(a):
+    return a * (a > 0)
 
 
 def main():
@@ -31,39 +35,31 @@ def main():
     batch_size = 500
     n_batches = X.shape[0]//batch_size
     learning_rate = 0.0004
-    epochs=10
+    epochs=1000
+    print_time = epochs//10
 
-    W1_init = np.random.randn(D, M) / np.sqrt(D)
-    b1_init = np.zeros(M)
-    W2_init = np.random.randn(M, K) / np.sqrt(M)
-    b2_init = np.zeros(K)
+    W_init = np.random.randn(D, K) / np.sqrt(D)
+    b_init = np.zeros(K)
 
     thX = Th.matrix('X')
     thT = Th.matrix('T')
-    W1 = theano.shared(W1_init, 'W1')
-    b1 = theano.shared(b1_init, 'b1')
-    W2 = theano.shared(W2_init, 'W2')
-    b2 = theano.shared(b2_init, 'b2')
+    W = theano.shared(W_init, 'W')
+    b = theano.shared(b_init, 'b')
 
     # Forward model
-    thZ = relu(thX.dot(W1) + b1)
-    thY = Th.nnet.softmax(thZ.dot(W2) + b2)
+    thY = Th.nnet.softmax(thX.dot(W) + b)
 
     # Cost
-    cost = -((thT*Th.log(thY)).sum() + reg*((W1*W1).sum() + (b1*b1).sum() + (W2*W2).sum() + (b2*b2).sum()))
+    cost = -((thT*Th.log(thY)).sum() + reg*((W*W).sum() + (b*b).sum()))
     
     # Predictions
     prediction = Th.argmax(thY, axis=1)
 
-    update_W1 = W1 - learning_rate*Th.grad(cost, W1)
-    update_W2 = W2 - learning_rate*Th.grad(cost, W2)
-    update_b1 = b1 - learning_rate*Th.grad(cost, b1)
-    update_b2 = b2 - learning_rate*Th.grad(cost, b2)
+    update_W = W - learning_rate*Th.grad(cost, W)
+    update_b = b - learning_rate*Th.grad(cost, b)
 
-    train = theano.function(inputs=[thX, thT], updates=[(W1, update_W1), 
-                                                        (W2, update_W2), 
-                                                        (b1, update_b1), 
-                                                        (b2, update_b2)])
+    train = theano.function(inputs=[thX, thT], updates=[(W, update_W), 
+                                                        (b, update_b)])
     
     get_prediction = theano.function(inputs=[thX, thT], outputs=[cost, prediction])
 
@@ -77,7 +73,7 @@ def main():
             
             train(X_batch, Y_batch)
 
-            if batch % 10 == 0:
+            if batch % print_time == 0:
                 test_cost, prediction = get_prediction(X_test, T_test)
                 err = error_rate(Y_test, prediction)
                 print("epoch [%d], batch [%d] : cost=[%.3f], error=[%.3f]" %(epoch, batch, test_cost, err))
