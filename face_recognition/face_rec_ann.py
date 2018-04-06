@@ -86,7 +86,8 @@ def plot_emotions():
 
 
 def main():
-    X_train, Y_train, X_test, Y_test = get_data()
+    file_loc = 'D:/dev/data/face_emotion_recognizer/fer2013.csv'
+    X_train, Y_train, X_test, Y_test = get_data(file_name=file_loc)
     #for i in range(7):
     #    print(np.sum(Y_train==i))
     nn_classify = NeuralNet(300)

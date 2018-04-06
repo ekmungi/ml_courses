@@ -24,9 +24,9 @@ def cross_entropy(Y, Y_hat):
     return -np.mean(Y*np.log(Y_hat))
 
 
-def get_data(balanced=True):
+def get_data(file_name, balanced=True):
     #df = pd.read_csv('D:/dev/data/fer2013.csv')
-    df = pd.read_csv('/media/avemuri/DEV/Data/deeplearning/fer2013/fer2013.csv')
+    df = pd.read_csv(file_name)
     Y = df['label'].as_matrix()
     X_str = df['pixels'].as_matrix()
     X = []
@@ -34,6 +34,7 @@ def get_data(balanced=True):
         X.append(np.fromstring(row, dtype=int, sep=' '))
         
     X = np.array(X) / 255.0
+    X = (X - X.mean(axis=1, keepdims=True)) / X.std(axis=1, keepdims=True)
 
     usage = df['Usage'].as_matrix()
     X_train, Y_train = X[usage=='Training'], Y[usage=='Training']
