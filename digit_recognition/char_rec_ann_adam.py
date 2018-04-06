@@ -30,15 +30,26 @@ class NeuralNet(object):
         self.b2 = np.zeros(K)
 
 
-        cache_W2 = 1
-        cache_b2 = 1
-        cache_W1 = 1
-        cache_b1 = 1
-        decay_rate = 0.999
-        eps = 1e-10
+        # 1st moment
+        mW1 = 0
+        mb1 = 0
+        mW2 = 0
+        mb2 = 0
+
+        # 2nd moment
+        vW1 = 0
+        vb1 = 0
+        vW2 = 0
+        vb2 = 0
+        
+
+        # hyperparams
+        beta1 = 0.9
+        beta2 = 0.999
+        eps = 1e-8
 
         costs = []
-        best_validation_error = 1
+        t = 1
         for epoch in range(epochs):
             X_shuffled, T_shuffled = shuffle(X, T)
             for ibatch in range(n_batches):
@@ -46,28 +57,47 @@ class NeuralNet(object):
                 X_batch = X_shuffled[ibatch*batch_size:(ibatch+1)*batch_size,:]
                 Y_batch = T_shuffled[ibatch*batch_size:(ibatch+1)*batch_size,:]
 
-
                 Y_hat, Z = self.forward(X_batch)
 
                 # Weight updates ----------------------
                 Y_hat_T = Y_hat-Y_batch
                 dJ_dW2 = Z.T.dot(Y_hat_T) + reg * self.W2
-                cache_W2 = decay_rate * cache_W2 + (1-decay_rate) * dJ_dW2 * dJ_dW2
-                self.W2 -= learning_rate * dJ_dW2/(np.sqrt(cache_W2) + eps)
-                
                 dJ_db2 = Y_hat_T.sum() + reg * self.b2
-                cache_b2 = learning_rate * cache_b2 + (1-decay_rate) * dJ_db2 * dJ_db2
-                self.b2 -= learning_rate * dJ_db2/(np.sqrt(cache_b2) + eps)
 
                 val = (Y_hat - Y_batch).dot(self.W2.T) * (Z > 0) # Relu
                 #val = Y_hat_T.dot(self.W2.T) * (1-Z*Z) # tanh
                 dJ_dW1 = X_batch.T.dot(val) + reg*self.W1
-                cache_W1 = learning_rate * cache_W1 + (1-decay_rate) * dJ_dW1 * dJ_dW1
-                self.W1 -= learning_rate * dJ_dW1/(np.sqrt(cache_W1) + eps)
-
                 dJ_db1 = val.sum() + reg*self.b1
-                cache_b1 = learning_rate * cache_b1 + (1-decay_rate) * dJ_db1 * dJ_db1
-                self.b1 -= learning_rate * dJ_db1/(np.sqrt(cache_b1) + eps)
+
+                # Mean
+                mW2 = beta1*mW2 + (1-beta1)*dJ_dW2
+                mb2 = beta1*mb2 + (1-beta1)*dJ_db2
+                mW1 = beta1*mW1 + (1-beta1)*dJ_dW1
+                mb1 = beta1*mb1 + (1-beta1)*dJ_db1
+
+                # Velocity terms
+                vW2 = beta2*vW2 + (1-beta2)*dJ_dW2*dJ_dW2
+                vb2 = beta2*vb2 + (1-beta2)*dJ_db2*dJ_db2
+                vW1 = beta2*vW1 + (1-beta2)*dJ_dW1*dJ_dW1
+                vb1 = beta2*vb1 + (1-beta2)*dJ_db1*dJ_db1
+
+                correction1 = 1 - beta1**t
+                hat_mW2 = mW2/correction1
+                hat_mb2 = mb2/correction1
+                hat_mW1 = mW1/correction1
+                hat_mb1 = mb1/correction1
+
+                correction2 = 1 - beta2**t
+                hat_vW2 = vW2/correction2
+                hat_vb2 = vb2/correction2
+                hat_vW1 = vW1/correction2
+                hat_vb1 = vb1/correction2
+                
+                
+                self.W2 -= learning_rate * hat_mW2/(np.sqrt(hat_vW2) + eps)
+                self.b2 -= learning_rate * hat_mb2/(np.sqrt(hat_vb2) + eps)
+                self.W1 -= learning_rate * hat_mW1/(np.sqrt(hat_vW1) + eps)
+                self.b1 -= learning_rate * hat_mb1/(np.sqrt(hat_vb1) + eps)
                 # -------------------------------------
 
                 Y_hat_valid, _ = self.forward(X_valid)
@@ -77,6 +107,8 @@ class NeuralNet(object):
                 if ibatch % (n_batches) == 0:
                     e = error_rate(Y_valid, np.argmax(Y_hat_valid, axis=1))
                     print("epoch:", epoch, " cost:", c, " error:", e)
+
+                t += 1
 
         if show_fig:
             plt.plot(costs)
@@ -128,10 +160,10 @@ def main():
     pca.fit(X_train)
     X_train_compressed = pca.transform(X_train)
 
-    nn_classify.fit(X_train_compressed, Y_train, epochs=50, learning_rate=0.001, reg=0.01, n_batches=50, show_fig=True)
+    nn_classify.fit(X_train, Y_train, epochs=50, learning_rate=0.001, reg=0.01, n_batches=50, show_fig=True)
 
     X_test_compressed = pca.transform(X_test)
-    print("Test classification_rate:", nn_classify.score(X_test_compressed, Y_test))
+    print("Test classification_rate:", nn_classify.score(X_test, Y_test))
 
 if __name__ == '__main__':
     main()
