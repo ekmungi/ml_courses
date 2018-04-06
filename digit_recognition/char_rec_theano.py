@@ -46,7 +46,7 @@ def main():
     b2 = theano.shared(b2_init, 'b2')
 
     # Forward model
-    thZ = relu(thX.dot(W1) + b1)
+    thZ = th.nnet.relu(thX.dot(W1) + b1)
     thY = Th.nnet.softmax(thZ.dot(W2) + b2)
 
     # Cost

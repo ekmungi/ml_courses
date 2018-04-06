@@ -68,7 +68,7 @@ def main():
 
 
     # forward model
-    thZ = relu(thX.dot(W1) + b1)
+    thZ = th.nnet.relu(thX.dot(W1) + b1)
     #thZ[thZ < 0] = 0
     # Z = np.tanh(X.dot(self.W1) + self.b1)
     thY = th.nnet.softmax(thZ.dot(W2) + b2)
