@@ -28,10 +28,11 @@ class HiddenLayer(object):
         return self.activation_fn(X.dot(self.W) + self.b)
 
 class ANN(object):
-    def __init__(self, hidden_layer_sizes):
+    def __init__(self, hidden_layer_sizes, p_keep):
         self.hidden_layer_sizes = hidden_layer_sizes
         self.layers = []
         self.params = []
+        self.dropout_rates = p_keep
 
     def fit(self, X, Y, activation=th.nnet.relu, learning_rate=1e-8, reg=1e-12, epochs=10000, n_batches=10, decay_rate=0.9, show_fig=False):
         X = X.astype(np.float32)
@@ -43,6 +44,8 @@ class ANN(object):
         T_valid = one_hot_encoder(Y_valid)
         X, Y = X[:-1000], Y[:-1000]
         T = one_hot_encoder(Y)
+
+        self.rng = theano.tensor.shared_randomstreams.RandomStreams()
 
 
         eps = 1e-10
@@ -71,31 +74,33 @@ class ANN(object):
 
         thX = th.matrix('X')
         thT = th.matrix('T')
-        thY = self.forward(thX)
+        thY_train = self.forward_train(thX)
 
         # Cost
         regularization_cost = reg * th.mean([(p*p).sum() for p in self.params])
         #cost = -th.mean(th.log(thY[th.arange(thT.shape[0]), thT])) #+ regularization_cost
-        cost = -th.mean(thT*th.log(thY)) + regularization_cost
+        cost = -th.mean(thT*th.log(thY_train)) + regularization_cost
 
-        
-        # Predictions
-        prediction = th.argmax(thY, axis=1)
 
         # Gradient
         grads = th.grad(cost, self.params)
-
-        cost_predict_op = theano.function(inputs=[thX, thT], 
-                                          outputs=[cost, prediction])
 
         update_params = [(p, p - learning_rate*(decay_rate*v + (1-decay_rate)*g + reg*p)) for g, v, p in zip(grads, dparams, self.params)]
         update_velocity = [(v, decay_rate*v + (1-decay_rate)*g) for g, v in zip(grads, dparams)]
         # updates = [(p, p - learning_rate*g) for g, p in zip(grads, self.params)]
         updates = update_params + update_velocity
-        
-
 
         train_op = theano.function(inputs=[thX, thT], updates=updates)
+        
+
+        thY_predict = self.forward_predict(thX)
+        cost = -th.mean(thT*th.log(thY_predict)) + regularization_cost
+
+        # Predictions
+        prediction = th.argmax(thY_predict, axis=1)
+
+        cost_predict_op = theano.function(inputs=[thX, thT], 
+                                          outputs=[cost, prediction])
 
         costs = []
         for epoch in range(epochs):
@@ -119,11 +124,16 @@ class ANN(object):
         plt.show()
 
 
-    def forward(self, X):
+    def forward_train(self, X):
         Z = X
-        for layer in self.layers:
+        for layer, p in zip(self.layers, self.dropout_rates[:-1]):
+            mask = self.rng.binomial(size=Z.shape, )
             Z = layer.forward(Z)
         return Z
+
+
+    def forward_predict(self, X):
+
 
 #### TO TEST
 # def main():
