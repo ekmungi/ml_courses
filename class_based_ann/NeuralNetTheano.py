@@ -79,11 +79,11 @@ class ANN(object):
         # Cost
         regularization_cost = reg * th.mean([(p*p).sum() for p in self.params])
         #cost = -th.mean(th.log(thY[th.arange(thT.shape[0]), thT])) #+ regularization_cost
-        cost = -th.mean(thT*th.log(thY_train)) + regularization_cost
+        cost_train = -th.mean(thT*th.log(thY_train)) + regularization_cost
 
 
         # Gradient
-        grads = th.grad(cost, self.params)
+        grads = th.grad(cost_train, self.params)
 
         update_params = [(p, p - learning_rate*(decay_rate*v + (1-decay_rate)*g + reg*p)) for g, v, p in zip(grads, dparams, self.params)]
         update_velocity = [(v, decay_rate*v + (1-decay_rate)*g) for g, v in zip(grads, dparams)]
@@ -94,7 +94,8 @@ class ANN(object):
         
 
         thY_predict = self.forward_predict(thX)
-        cost = -th.mean(thT*th.log(thY_predict)) + regularization_cost
+        cost_predict = -th.mean(thT*th.log(thY_predict)) + regularization_cost
+
 
         # Predictions
         prediction = th.argmax(thY_predict, axis=1)
@@ -127,29 +128,36 @@ class ANN(object):
     def forward_train(self, X):
         Z = X
         for layer, p in zip(self.layers, self.dropout_rates[:-1]):
-            mask = self.rng.binomial(size=Z.shape, )
+            mask = self.rng.binomial(size=Z.shape, n=1, p=p)
+            Z = mask * Z
             Z = layer.forward(Z)
-        return Z
+        # for the last layer
+        mask = self.rng.binomial(size=Z.shape, n=1, p=self.dropout_rates[-1])
+        Z = Z*mask
+        return th.nnet.softmax(Z.dot(self.W) + self.b)
 
 
     def forward_predict(self, X):
+        Z = X
+        for layer, p in zip(self.layers, self.dropout_rates[:-1]):
+            Z = layer.forward(p * Z)
+        return th.nnet.softmax((self.dropout_rates[-1] * Z).dot(self.W) + self.b)
 
-
-#### TO TEST
-# def main():
-#     file_loc = '/media/avemuri/DEV/Data/deeplearning/mnist/train.csv'
-#     #file_loc = 'D:/dev/data/mnist/train.csv'
-#     X_train, Y_train = get_data(file_name=file_loc, split_train_test=False)
-#     pca = PCA(n_components=400)
-#     pca.fit(X_train)
-#     X_train_compressed = pca.transform(X_train)
+### TO TEST
+def main():
+    #file_loc = '/media/avemuri/DEV/Data/deeplearning/mnist/train.csv'
+    file_loc = 'D:/dev/data/mnist/train.csv'
+    X_train, Y_train = get_data(file_name=file_loc, split_train_test=False)
+    pca = PCA(n_components=400)
+    pca.fit(X_train)
+    X_train_compressed = pca.transform(X_train)
     
-#     ann_classify = ANN([400])
-#     ann_classify.fit(X_train, Y_train, epochs=200, learning_rate=0.07, reg=1e-4)
+    ann_classify = ANN([400, 100], p_keep=[0.8, 0.5, 0.5])
+    ann_classify.fit(X_train, Y_train, epochs=200, learning_rate=0.07, reg=1e-4)
 
 
-# if __name__ == '__main__':
-#     main()
+if __name__ == '__main__':
+    main()
     
 
 
