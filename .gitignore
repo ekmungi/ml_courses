@@ -99,7 +99,14 @@ ENV/
 
 # mypy
 .mypy_cache/
+__pycache__/
 
 \.vscode/
 
 \.idea/
+
+*.pth
+
+*.pyc
+
+*.DS_Store
